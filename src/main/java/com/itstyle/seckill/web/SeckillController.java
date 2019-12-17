@@ -156,19 +156,26 @@ public class SeckillController {
 		}
 		return Result.ok();
 	}
+
+
 	@ApiOperation(value="秒杀四(数据库悲观锁)",nickname="科帮网")
 	@PostMapping("/startDBPCC_ONE")
 	public Result startDBPCC_ONE(long seckillId){
+		ServletRequestAttributes sra = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		RequestContextHolder.setRequestAttributes(sra, true);
 		int skillNum = 1000;
-		final CountDownLatch latch = new CountDownLatch(skillNum);//N个购买者
-		seckillService.deleteSeckill(seckillId);
+		//N个购买者
+		final CountDownLatch latch = new CountDownLatch(skillNum);
+		seckillService.resetData(50 ,seckillId);
 		final long killId =  seckillId;
 		LOGGER.info("开始秒杀四(正常)");
 		for(int i=0;i<1000;i++){
 			final long userId = i;
 			Runnable task = () -> {
 				Result result = seckillService.startSeckilDBPCC_ONE(killId, userId);
-				LOGGER.info("用户:{}{}",userId,result.get("msg"));
+				if (result != null) {
+					LOGGER.info("用户:{}{}",userId,result.get("msg"));
+				}
 				latch.countDown();
 			};
 			executor.execute(task);

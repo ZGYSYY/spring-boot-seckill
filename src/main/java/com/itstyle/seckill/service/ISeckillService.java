@@ -85,7 +85,11 @@ public interface ISeckillService {
 	 */
 	Result startSeckilTemplate(long seckillId,long userId,long number);
 
-
+	/**
+	 * 恢复秒杀数据，方便测试
+	 * @param number
+	 * @param seckillId
+	 */
 	void resetData(int number, long seckillId);
     
 }
