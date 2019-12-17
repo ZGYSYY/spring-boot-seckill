@@ -7,6 +7,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,9 @@ import com.itstyle.seckill.service.ISeckillService;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+/**
+ * @author ZGY
+ */
 @Api(tags ="秒杀")
 @RestController
 @RequestMapping("/seckill")
@@ -31,9 +35,17 @@ public class SeckillController {
 	private final static Logger LOGGER = LoggerFactory.getLogger(SeckillController.class);
 	
 	private static int corePoolSize = Runtime.getRuntime().availableProcessors();
-	//创建线程池  调整队列数 拒绝服务
+
+	/**
+	 * 创建线程池  调整队列数 拒绝服务。
+	 */
 	private static ThreadPoolExecutor executor  = new ThreadPoolExecutor(corePoolSize, corePoolSize+1, 10L, TimeUnit.SECONDS,
 			new LinkedBlockingQueue<>(1000));
+
+	/**
+	 * 定义一个可重入锁，默认为非公平锁，这里定义为公平锁。
+	 */
+	private final ReentrantLock lock = new ReentrantLock(true);
 	
 	@Autowired
 	private ISeckillService seckillService;
@@ -82,22 +94,33 @@ public class SeckillController {
 	@PostMapping("/startLock")
 	public Result startLock(long seckillId){
 		int skillNum = 1000;
+
+		// 恢复数据
+		seckillService.resetData(50, seckillId);
 		//N个购买者
 		final CountDownLatch latch = new CountDownLatch(skillNum);
-		seckillService.deleteSeckill(seckillId);
 		final long killId =  seckillId;
 		LOGGER.info("开始秒杀二(正常)");
-		for(int i=0;i<1000;i++){
+		for(int i=0;i<skillNum;i++){
 			final long userId = i;
 			Runnable task = () -> {
-				Result result = seckillService.startSeckilLock(killId, userId);
+				Result result = null;
+				try {
+					lock.lock();
+					result = seckillService.startSeckilLock(killId, userId);
+				} catch (Exception e) {
+					LOGGER.error("执行SQL出错！");
+				} finally {
+					lock.unlock();
+				}
 				LOGGER.info("用户:{}{}",userId,result.get("msg"));
 				latch.countDown();
 			};
 			executor.execute(task);
 		}
 		try {
-			latch.await();// 等待所有人任务结束
+			// 等待所有人任务结束
+			latch.await();
 			Long  seckillCount = seckillService.getSeckillCount(seckillId);
 			LOGGER.info("一共秒杀出{}件商品",seckillCount);
 		} catch (InterruptedException e) {
@@ -105,13 +128,14 @@ public class SeckillController {
 		}
 		return Result.ok();
 	}
+
 	@ApiOperation(value="秒杀三(AOP程序锁)",nickname="科帮网")
 	@PostMapping("/startAopLock")
 	public Result startAopLock(long seckillId){
 		int skillNum = 1000;
 		//N个购买者
 		final CountDownLatch latch = new CountDownLatch(skillNum);
-		seckillService.deleteSeckill(seckillId);
+		seckillService.resetData(100, seckillId);
 		final long killId =  seckillId;
 		LOGGER.info("开始秒杀三(正常)");
 		for(int i=0;i<1000;i++){

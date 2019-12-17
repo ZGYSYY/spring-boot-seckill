@@ -84,5 +84,8 @@ public interface ISeckillService {
 	 * @return
 	 */
 	Result startSeckilTemplate(long seckillId,long userId,long number);
+
+
+	void resetData(int number, long seckillId);
     
 }

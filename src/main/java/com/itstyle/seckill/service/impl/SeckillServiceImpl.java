@@ -21,12 +21,6 @@ import com.itstyle.seckill.repository.SeckillRepository;
 import com.itstyle.seckill.service.ISeckillService;
 @Service("seckillService")
 public class SeckillServiceImpl implements ISeckillService {
-
-    /**
-     * 思考：为什么不用synchronized
-     * service 默认是单例的，并发下lock只有一个实例
-     */
-	private Lock lock = new ReentrantLock(true);//互斥锁 参数默认false，不公平锁  
 	
 	@Autowired
 	private DynamicQuery dynamicQuery;
@@ -99,40 +93,35 @@ public class SeckillServiceImpl implements ISeckillService {
 		}
 	}
 
+	/**
+	 * 切忌不要在 @Transactional 修饰的方法中加锁或者在其方法声明上加 synchronized 关键字，这样做并不能保证数据的准确，
+	 * 因为事务代码是在方法执行完后才执行的，在上述情况下，会出现锁被释放了，但是事务还没有提交，试想一下在此时，另一个线程进入该方法中，
+	 * 执行了一些与数据库相关的代码，实际上是在同一个事务中。并没有达到事务的隔离性，所以导致数据不准确，出现超卖的情况。
+	 * @param seckillId
+	 * @param userId
+	 * @return
+	 */
 	@Override
 	@Transactional
-	public Result  startSeckilLock(long seckillId, long userId) {
-		 try {
-			lock.lock();
-			/**
-			 * 1)这里、不清楚为啥、总是会被超卖101、难道锁不起作用、lock是同一个对象
-			 * 2)来自热心网友 zoain 的细心测试思考、然后自己总结了一下,事物未提交之前，锁已经释放(事物提交是在整个方法执行完)，导致另一个事物读取到了这个事物未提交的数据，也就是传说中的脏读。建议锁上移
-			 * 3)给自己留个坑思考：为什么分布式锁(zk和redis)没有问题？(事实是有问题的，由于redis释放锁需要远程通信，不那么明显而已)
-			 * 4)2018年12月35日，更正一下,之前的解释（脏读）可能给大家一些误导,数据库默认的事务隔离级别为 可重复读(repeatable-read)，也就不可能出现脏读
-			 * 哪个这个级别是只能是幻读了？分析一下：幻读侧重于新增或删除，这里显然不是，那这里到底是什么，给各位大婶留个坑~~~~
-			 */
-			String nativeSql = "SELECT number FROM seckill WHERE seckill_id=?";
-			Object object =  dynamicQuery.nativeQueryObject(nativeSql, new Object[]{seckillId});
-			Long number =  ((Number) object).longValue();
-			if(number>0){
-				nativeSql = "UPDATE seckill  SET number=number-1 WHERE seckill_id=?";
-				dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{seckillId});
-				SuccessKilled killed = new SuccessKilled();
-				killed.setSeckillId(seckillId);
-				killed.setUserId(userId);
-				killed.setState(Short.parseShort(number+""));
-				killed.setCreateTime(new Timestamp(new Date().getTime()));
-				dynamicQuery.save(killed);
-			}else{
-				return Result.error(SeckillStatEnum.END);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}finally {
-			lock.unlock();
+	public Result startSeckilLock(long seckillId, long userId) {
+		String nativeSql = "SELECT number FROM seckill WHERE seckill_id=?";
+		Object object = dynamicQuery.nativeQueryObject(nativeSql, new Object[]{seckillId});
+		Long number = ((Number) object).longValue();
+		if (number > 0) {
+			nativeSql = "UPDATE seckill  SET number=number-1 WHERE seckill_id=?";
+			dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{seckillId});
+			SuccessKilled killed = new SuccessKilled();
+			killed.setSeckillId(seckillId);
+			killed.setUserId(userId);
+			killed.setState(Short.valueOf("0"));
+			killed.setCreateTime(new Timestamp(System.currentTimeMillis()));
+			dynamicQuery.save(killed);
+		} else {
+			return Result.error(SeckillStatEnum.END);
 		}
 		return Result.ok(SeckillStatEnum.SUCCESS);
 	}
+
 	@Override
 	@Servicelock
 	@Transactional
@@ -147,8 +136,8 @@ public class SeckillServiceImpl implements ISeckillService {
 			SuccessKilled killed = new SuccessKilled();
 			killed.setSeckillId(seckillId);
 			killed.setUserId(userId);
-			killed.setState(Short.parseShort(number+""));
-			killed.setCreateTime(new Timestamp(new Date().getTime()));
+			killed.setState(Short.valueOf("0"));
+			killed.setCreateTime(new Timestamp(System.currentTimeMillis()));
 			dynamicQuery.save(killed);
 		}else{
 			return Result.error(SeckillStatEnum.END);
@@ -228,6 +217,17 @@ public class SeckillServiceImpl implements ISeckillService {
 	@Override
 	public Result startSeckilTemplate(long seckillId, long userId, long number) {
 		return null;
+	}
+
+	@Transactional
+	@Override
+	public void resetData(int number, long id) {
+		// 删除上次测试插入的数据
+		String nativeSql = "DELETE FROM success_killed WHERE seckill_id=?";
+		dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{id});
+		// 恢复初始数据
+		nativeSql = "UPDATE seckill SET number = " + number + " WHERE seckill_id=?";
+		dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{id});
 	}
 
 }
