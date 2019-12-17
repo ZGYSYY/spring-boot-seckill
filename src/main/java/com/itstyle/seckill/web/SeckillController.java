@@ -195,14 +195,16 @@ public class SeckillController {
 	public Result startDPCC_TWO(long seckillId){
 		int skillNum = 1000;
 		final CountDownLatch latch = new CountDownLatch(skillNum);//N个购买者
-		seckillService.deleteSeckill(seckillId);
+		seckillService.resetData(20, seckillId);
 		final long killId =  seckillId;
 		LOGGER.info("开始秒杀五(正常、数据库锁最优实现)");
-		for(int i=0;i<1000;i++){
+		for(int i=0;i<skillNum;i++){
 			final long userId = i;
 			Runnable task = () -> {
 				Result result = seckillService.startSeckilDBPCC_TWO(killId, userId);
-				LOGGER.info("用户:{}{}",userId,result.get("msg"));
+				if (result != null) {
+					LOGGER.info("用户:{}{}",userId,result.get("msg"));
+				}
 				latch.countDown();
 			};
 			executor.execute(task);
@@ -222,7 +224,7 @@ public class SeckillController {
 	public Result startDBOCC(long seckillId){
 		int skillNum = 1000;
 		final CountDownLatch latch = new CountDownLatch(skillNum);//N个购买者
-		seckillService.deleteSeckill(seckillId);
+		seckillService.resetData(20, seckillId);
 		final long killId =  seckillId;
 		LOGGER.info("开始秒杀六(正常、数据库锁最优实现)");
 		for(int i=0;i<1000;i++){
@@ -249,7 +251,7 @@ public class SeckillController {
 	@ApiOperation(value="秒杀柒(进程内队列)",nickname="科帮网")
 	@PostMapping("/startQueue")
 	public Result startQueue(long seckillId){
-		seckillService.deleteSeckill(seckillId);
+		seckillService.resetData(20, seckillId);
 		final long killId =  seckillId;
 		LOGGER.info("开始秒杀柒(正常)");
 		for(int i=0;i<1000;i++){
@@ -261,7 +263,7 @@ public class SeckillController {
 				try {
 					Boolean flag = SeckillQueue.getMailQueue().produce(kill);
 					if(flag){
-						LOGGER.info("用户:{}{}",kill.getUserId(),"秒杀成功");
+						LOGGER.info("用户:{}{}",kill.getUserId(),"有秒杀成功");
 					}else{
 						LOGGER.info("用户:{}{}",userId,"秒杀失败");
 					}
@@ -273,7 +275,8 @@ public class SeckillController {
 			executor.execute(task);
 		}
 		try {
-			Thread.sleep(10000);
+			// 当前线程等待 8 秒钟后查看有多少用户秒杀成功
+			TimeUnit.SECONDS.sleep(8);
 			Long  seckillCount = seckillService.getSeckillCount(seckillId);
 			LOGGER.info("一共秒杀出{}件商品",seckillCount);
 		} catch (InterruptedException e) {
@@ -285,9 +288,10 @@ public class SeckillController {
 	@ApiOperation(value="秒杀柒(Disruptor队列)",nickname="科帮网")
 	@PostMapping("/startDisruptorQueue")
 	public Result startDisruptorQueue(long seckillId){
-		seckillService.deleteSeckill(seckillId);
+		seckillService.resetData(100, seckillId);
 		final long killId =  seckillId;
 		LOGGER.info("开始秒杀八(正常)");
+		// 模拟 1000 个用户同时开始请求
 		for(int i=0;i<1000;i++){
 			final long userId = i;
 			Runnable task = () -> {

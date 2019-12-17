@@ -10,6 +10,7 @@ import com.lmax.disruptor.RingBuffer;
 public class SeckillEventProducer {
 	
 	private final static EventTranslatorVararg<SeckillEvent> translator = new EventTranslatorVararg<SeckillEvent>() {
+		@Override
 		public void translateTo(SeckillEvent seckillEvent, long seq, Object... objs) {
 			seckillEvent.setSeckillId((Long) objs[0]);
 			seckillEvent.setUserId((Long) objs[1]);

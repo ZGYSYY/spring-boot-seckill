@@ -30,15 +30,18 @@ public class LimitAspect {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(LimitAspect.class);
 
-	//根据IP分不同的令牌桶, 每天自动清理缓存
+	/**
+	 * 根据IP分不同的令牌桶, 每天自动清理缓存
+	 */
 	private static LoadingCache<String, RateLimiter> caches = CacheBuilder.newBuilder()
 			.maximumSize(1000)
 			.expireAfterWrite(1, TimeUnit.DAYS)
 			.build(new CacheLoader<String, RateLimiter>() {
 				@Override
 				public RateLimiter load(String key) {
+					LOGGER.info("缓存中没有数据，这时令牌桶中每秒钟向令牌桶中生成5个令牌");
 					// 新的IP初始化 每秒只发出5个令牌
-					return RateLimiter.create(5);
+					return RateLimiter.create(20);
 				}
 			});
 	
@@ -63,7 +66,7 @@ public class LimitAspect {
 		try {
 			rateLimiter = caches.get(key);
 		} catch (ExecutionException e) {
-			LOGGER.error("从缓存中获取 rateLimiter 对象发生了异常！", e);
+			LOGGER.error("获取 rateLimiter 对象发生异常！", e);
 		}
 		Boolean flag = rateLimiter.tryAcquire();
 		if(flag){

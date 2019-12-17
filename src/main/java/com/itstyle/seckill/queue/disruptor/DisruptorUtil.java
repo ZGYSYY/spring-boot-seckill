@@ -17,6 +17,7 @@ public class DisruptorUtil {
 		SeckillEventFactory factory = new SeckillEventFactory();
 		int ringBufferSize = 1024;
 		ThreadFactory threadFactory = new ThreadFactory() {
+			@Override
 			public Thread newThread(Runnable runnable) {
 				return new Thread(runnable);
 			}

@@ -203,7 +203,7 @@ public class SeckillServiceImpl implements ISeckillService {
 				killed.setSeckillId(seckillId);
 				killed.setUserId(userId);
 				killed.setState((short)0);
-				killed.setCreateTime(new Timestamp(new Date().getTime()));
+				killed.setCreateTime(new Timestamp(System.currentTimeMillis()));
 				dynamicQuery.save(killed);
 				return Result.ok(SeckillStatEnum.SUCCESS);
 			}else{
@@ -217,6 +217,31 @@ public class SeckillServiceImpl implements ISeckillService {
 	@Override
 	public Result startSeckilTemplate(long seckillId, long userId, long number) {
 		return null;
+	}
+
+	@Override
+	@Transactional
+	public Result seckill7(long seckillId, long userId) {
+		//校验库存
+		String nativeSql = "SELECT number FROM seckill WHERE seckill_id=?";
+		Object object =  dynamicQuery.nativeQueryObject(nativeSql, new Object[]{seckillId});
+		Long number =  ((Number) object).longValue();
+		if(number>0) {
+			//扣库存
+			nativeSql = "UPDATE seckill  SET number=number-1 WHERE seckill_id=?";
+			dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{seckillId});
+			//创建订单
+			SuccessKilled killed = new SuccessKilled();
+			killed.setSeckillId(seckillId);
+			killed.setUserId(userId);
+			killed.setState((short) 0);
+			Timestamp createTime = new Timestamp(System.currentTimeMillis());
+			killed.setCreateTime(createTime);
+			dynamicQuery.save(killed);
+			return Result.ok(SeckillStatEnum.SUCCESS);
+		} else {
+			return Result.ok(SeckillStatEnum.END);
+		}
 	}
 
 	@Transactional

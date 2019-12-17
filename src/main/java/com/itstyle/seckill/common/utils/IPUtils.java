@@ -40,7 +40,9 @@ public class IPUtils {
 				ip = request.getRemoteAddr();
 			}
 		} catch (Exception e) {
-			logger.error("IPUtils ERROR ", e);
+			logger.error("获取 ip 地址发生了错误！", e);
+			ip = "127.0.0.1";
+			return ip;
 		}
 		// 使用代理，则获取第一个IP地址
 		if (StringUtils.isNotEmpty(ip) && ip.length() > 15) {
@@ -48,6 +50,7 @@ public class IPUtils {
 				ip = ip.substring(0, ip.indexOf(","));
 			}
 		}
+		logger.info("获取 ip 成功，ip地址为：{}", ip);
 		return ip;
 	}
 }

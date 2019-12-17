@@ -86,6 +86,12 @@ public interface ISeckillService {
 	Result startSeckilTemplate(long seckillId,long userId,long number);
 
 	/**
+	 * 秒杀七，使用进程内队列
+	 * @return
+	 */
+	Result seckill7(long seckillId, long userId);
+
+	/**
 	 * 恢复秒杀数据，方便测试
 	 * @param number
 	 * @param seckillId
