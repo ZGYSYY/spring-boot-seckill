@@ -31,20 +31,20 @@ public class Test03App {
          * producerType: 生产者策略，ProducerType.SINGLE和ProducerType.MULTI 单个生产者还是多个生产者。
          * waitStrategy: 等待策略，用来平衡事件发布者和事件处理者之间的处理效率，提供了八种策略，默认是BlockingWaitStrategy。
          */
-        // 创建 Disruptor 对象
+        // 创建 Disruptor 对象。
         Disruptor<TradBO> disruptor = new Disruptor<TradBO>(() -> new TradBO(), 2, (x) -> {
             Thread thread = new Thread(x);
             thread.setName("实战单线程生产者");
             return thread;
         }, ProducerType.SINGLE, new BlockingWaitStrategy());
 
-        // 关联事件处理者
+        // 关联事件处理者。
         disruptor.handleEventsWith(new ConsumerA());
         disruptor.handleEventsWith(new ConsumerB());
-        // 启动消费者线程
+        // 启动消费者线程。
         disruptor.start();
 
-        // 发布事件
+        // 发布事件。
         for (int i = 0; i < 10; i++) {
             // 创建 EventTranslator 对象，该对象是发布事件方法的参数。
             final int value = i;
@@ -56,6 +56,7 @@ public class Test03App {
             disruptor.publishEvent(eventTranslator);
         }
 
+        // 销毁 Disruptor 对象。
         disruptor.shutdown();
     }
 
