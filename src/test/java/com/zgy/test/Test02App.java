@@ -93,7 +93,7 @@ public class Test02App {
     }
 
     /**
-     * 定义事件消费者A
+     * 定义事件消费者B
      */
     private class MyEventHandlerB implements EventHandler<MyEvent> {
         @Override
@@ -103,7 +103,7 @@ public class Test02App {
     }
 
     /**
-     * 定义事件消费者A
+     * 定义事件消费者C
      */
     private class MyEventHandlerC implements EventHandler<MyEvent> {
         @Override
