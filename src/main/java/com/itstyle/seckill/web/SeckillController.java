@@ -28,7 +28,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 /**
  * @author ZGY
  */
-@Api(tags ="秒杀")
+@Api(tags ="秒杀 API 测试")
 @RestController
 @RequestMapping("/seckill")
 public class SeckillController {
@@ -285,14 +285,14 @@ public class SeckillController {
 		return Result.ok();
 	}
 
-	@ApiOperation(value="秒杀柒(Disruptor队列)",nickname="科帮网")
+	@ApiOperation(value = "秒杀七，使用 Disruptor 高性能队列来实现秒杀功能。当大量请求访问该接口时，该接口会将所有请求交给 Disruptor 来异步处理，而秒杀这个业务是不会出现阻塞情况的，接口会直接返回值。)")
 	@PostMapping("/startDisruptorQueue")
-	public Result startDisruptorQueue(long seckillId){
+	public Result startDisruptorQueue(long seckillId) {
 		seckillService.resetData(100, seckillId);
-		final long killId =  seckillId;
+		final long killId = seckillId;
 		LOGGER.info("开始秒杀八(正常)");
 		// 模拟 1000 个用户同时开始请求
-		for(int i=0;i<1000;i++){
+		for (int i = 0; i < 1000; i++) {
 			final long userId = i;
 			Runnable task = () -> {
 				SeckillEvent kill = new SeckillEvent();
@@ -302,10 +302,14 @@ public class SeckillController {
 			};
 			executor.execute(task);
 		}
+
+		LOGGER.info("秒杀程序已经结束了，请等待15秒钟查看秒杀结果！");
+
+		// 获取结果
 		try {
-			Thread.sleep(10000);
-			Long  seckillCount = seckillService.getSeckillCount(seckillId);
-			LOGGER.info("一共秒杀出{}件商品",seckillCount);
+			TimeUnit.SECONDS.sleep(15);
+			Long seckillCount = seckillService.getSeckillCount(seckillId);
+			LOGGER.info("一共秒杀出{}件商品", seckillCount);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

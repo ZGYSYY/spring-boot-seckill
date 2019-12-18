@@ -92,6 +92,14 @@ public interface ISeckillService {
 	Result seckill7(long seckillId, long userId);
 
 	/**
+	 * 秒杀八，使用 Disruptor 并发框架
+	 * @param seckillId
+	 * @param userId
+	 * @return
+	 */
+	Result seckill8(long seckillId, long userId);
+
+	/**
 	 * 恢复秒杀数据，方便测试
 	 * @param number
 	 * @param seckillId

@@ -4,16 +4,13 @@ import java.io.Serializable;
 
 /**
  * 事件对象（秒杀事件）
- * 创建者 科帮网
+ * @author ZGY
  */
 public class SeckillEvent implements Serializable {
+
 	private static final long serialVersionUID = 1L;
 	private long seckillId;
 	private long userId;
-	
-	public SeckillEvent(){
-		
-	}
 
 	public long getSeckillId() {
 		return seckillId;

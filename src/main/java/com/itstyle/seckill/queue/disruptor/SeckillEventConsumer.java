@@ -11,8 +11,9 @@ import com.lmax.disruptor.EventHandler;
 public class SeckillEventConsumer implements EventHandler<SeckillEvent> {
 	
 	private ISeckillService seckillService = (ISeckillService) SpringUtil.getBean("seckillService");
-	
+
+	@Override
 	public void onEvent(SeckillEvent seckillEvent, long seq, boolean bool) throws Exception {
-		seckillService.startSeckil(seckillEvent.getSeckillId(), seckillEvent.getUserId());
+		seckillService.seckill8(seckillEvent.getSeckillId(), seckillEvent.getUserId());
 	}
 }
