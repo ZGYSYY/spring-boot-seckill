@@ -52,7 +52,7 @@ public class SeckillDistributedServiceImpl implements ISeckillDistributedService
              * 周末测试了一下，把redis配置在了本地，果然出现了超卖的情况；或者还是使用外网并发数增加在10000+也是会有问题的，之前自己没有细测，我的锅。
              * 所以这钟实现也是错误的，事物和锁会有冲突，建议AOP实现。
              */
-            res = RedissLockUtil.tryLock(seckillId + "", TimeUnit.SECONDS, 3, 20);
+            res = RedissLockUtil.tryLock(seckillId + "", TimeUnit.MILLISECONDS, 1000, 2000);
             if (res) {
                 LOGGER.info("用户：{}尝试加锁成功，开始对数据库进行操作", userId);
                 String nativeSql = "SELECT number FROM seckill WHERE seckill_id=?";
@@ -68,7 +68,7 @@ public class SeckillDistributedServiceImpl implements ISeckillDistributedService
 					TransactionStatus transactionStatus = transactionManager.getTransaction(transactionDefinition);
 					try {
 					    // 模拟复杂业务，需要持锁很长时间
-                        TimeUnit.SECONDS.sleep(3);
+                        TimeUnit.SECONDS.sleep(1);
 
 						dynamicQuery.save(killed);
 						nativeSql = "UPDATE seckill  SET number=number-1 WHERE seckill_id=? AND number>0";
