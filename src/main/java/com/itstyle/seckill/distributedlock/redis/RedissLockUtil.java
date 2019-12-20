@@ -3,12 +3,15 @@ import java.util.concurrent.TimeUnit;
 
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * redis分布式锁帮助类
  * @author 科帮网 By https://blog.52itstyle.com
  */
 public class RedissLockUtil {
+
     private static RedissonClient redissonClient;
     
     public void setRedissonClient(RedissonClient locker) {

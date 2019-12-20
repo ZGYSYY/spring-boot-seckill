@@ -1,15 +1,10 @@
 package com.itstyle.seckill.service.impl;
 
 import java.sql.Timestamp;
-import java.util.Date;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.itstyle.seckill.common.aop.ServiceLimit;
 import com.itstyle.seckill.common.aop.Servicelock;
 import com.itstyle.seckill.common.dynamicquery.DynamicQuery;
@@ -19,6 +14,10 @@ import com.itstyle.seckill.common.entity.SuccessKilled;
 import com.itstyle.seckill.common.enums.SeckillStatEnum;
 import com.itstyle.seckill.repository.SeckillRepository;
 import com.itstyle.seckill.service.ISeckillService;
+
+/**
+ * @author ZGY
+ */
 @Service("seckillService")
 public class SeckillServiceImpl implements ISeckillService {
 	
@@ -43,6 +42,7 @@ public class SeckillServiceImpl implements ISeckillService {
 		Object object =  dynamicQuery.nativeQueryObject(nativeSql, new Object[]{seckillId});
 		return ((Number) object).longValue();
 	}
+
 	@Override
 	@Transactional
 	public void deleteSeckill(long seckillId) {
