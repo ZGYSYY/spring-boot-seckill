@@ -2,13 +2,11 @@ package com.itstyle.seckill.web;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javax.jms.Destination;
-
 import org.apache.activemq.command.ActiveMQQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,22 +98,34 @@ public class SeckillDistributedController {
         return Result.ok();
     }
 
-    @ApiOperation(value = "秒杀二(zookeeper分布式锁)", nickname = "科帮网")
+    /**
+     *
+     * @param seckillId
+     * @return
+     */
+    @ApiOperation(value = "秒杀二(zookeeper分布式锁)")
     @PostMapping("/startZkLock")
     public Result startZkLock(long seckillId) {
-        seckillService.deleteSeckill(seckillId);
+        // 恢复数据
+        seckillService.resetData(100, seckillId);
+
+        // 模拟多人同时秒杀
         final long killId = seckillId;
         LOGGER.info("开始秒杀二");
-        for (int i = 0; i < 10000; i++) {
+        int threadNumber = 1000;
+        CountDownLatch latch = new CountDownLatch(threadNumber);
+        for (int i = 0; i < threadNumber; i++) {
             final long userId = i;
             Runnable task = () -> {
                 Result result = seckillDistributedService.startSeckilZksLock(killId, userId);
                 LOGGER.info("用户:{}{}", userId, result.get("msg"));
+                latch.countDown();
             };
             executor.execute(task);
         }
         try {
-            Thread.sleep(10000);
+            latch.await();
+            LOGGER.info("秒杀模拟结束，正在获取秒杀结果，请等待。。。");
             Long seckillCount = seckillService.getSeckillCount(seckillId);
             LOGGER.info("一共秒杀出{}件商品", seckillCount);
         } catch (InterruptedException e) {

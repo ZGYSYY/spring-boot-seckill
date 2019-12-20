@@ -98,11 +98,9 @@ public class SeckillDistributedServiceImpl implements ISeckillDistributedService
     }
 
     @Override
-    @Transactional
     public Result startSeckilZksLock(long seckillId, long userId) {
         boolean res = false;
         try {
-            //基于redis分布式锁 基本就是上面这个解释 但是 使用zk分布式锁 使用本地zk服务 并发到10000+还是没有问题，谁的锅？
             res = ZkLockUtil.acquire(3, TimeUnit.SECONDS);
             if (res) {
                 String nativeSql = "SELECT number FROM seckill WHERE seckill_id=?";
@@ -113,10 +111,18 @@ public class SeckillDistributedServiceImpl implements ISeckillDistributedService
                     killed.setSeckillId(seckillId);
                     killed.setUserId(userId);
                     killed.setState((short) 0);
-                    killed.setCreateTime(new Timestamp(new Date().getTime()));
-                    dynamicQuery.save(killed);
-                    nativeSql = "UPDATE seckill  SET number=number-1 WHERE seckill_id=? AND number>0";
-                    dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{seckillId});
+                    killed.setCreateTime(new Timestamp(System.currentTimeMillis()));
+                    TransactionStatus transactionStatus = transactionManager.getTransaction(transactionDefinition);
+                    try {
+                        dynamicQuery.save(killed);
+                        nativeSql = "UPDATE seckill  SET number=number-1 WHERE seckill_id=? AND number>0";
+                        dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{seckillId});
+                        transactionManager.commit(transactionStatus);
+                    } catch (Exception e) {
+                        transactionManager.rollback(transactionStatus);
+                        LOGGER.error("操作数据库发生异常!", e);
+                        return Result.error(SeckillStatEnum.END);
+                    }
                 } else {
                     return Result.error(SeckillStatEnum.END);
                 }
