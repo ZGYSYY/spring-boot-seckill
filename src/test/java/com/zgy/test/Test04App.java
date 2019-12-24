@@ -3,6 +3,8 @@ package com.zgy.test;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.api.BackgroundCallback;
+import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
@@ -12,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.Charset;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * @author ZGY
@@ -133,5 +137,53 @@ public class Test04App {
          */
         stat = client.checkExists().forPath("/name5");
         LOGGER.info("检查节点是否存在, stat: [{}]", stat);
+    }
+
+    /**
+     * 事务原子性操作
+     * @throws Exception
+     */
+    @Test
+    public void test4() throws Exception {
+        RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
+        CuratorFramework client = CuratorFrameworkFactory.builder()
+                .connectString("127.0.0.1:2181")
+                .sessionTimeoutMs(5000)
+                .connectionTimeoutMs(5000)
+                .retryPolicy(retryPolicy)
+                .namespace("study")
+                .build();
+        client.start();
+
+        // 事务操作，保证原子性
+        client.inTransaction()
+                .create().withMode(CreateMode.EPHEMERAL).forPath("/name", "aaaaa".getBytes())
+                .and().setData().forPath("/name", "bbb".getBytes())
+                .and().commit();
+    }
+
+    /**
+     * 异步操作
+     * @throws Exception
+     */
+    @Test
+    public void test5() throws Exception {
+        RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
+        CuratorFramework client = CuratorFrameworkFactory.builder()
+                .connectString("127.0.0.1:2181")
+                .sessionTimeoutMs(5000)
+                .connectionTimeoutMs(5000)
+                .retryPolicy(retryPolicy)
+                .namespace("study")
+                .build();
+        client.start();
+
+        Executor executor = Executors.newFixedThreadPool(2);
+        client.create().creatingParentContainersIfNeeded().withProtection().withMode(CreateMode.EPHEMERAL).inBackground(new BackgroundCallback() {
+            @Override
+            public void processResult(CuratorFramework client, CuratorEvent event) throws Exception {
+                LOGGER.info("开始调用回调方法，WatchedEvent: [{}], ResultCode: [{}]", event.getType(), event.getResultCode());
+            }
+        }, executor).forPath("/name6", "AAA".getBytes());
     }
 }
