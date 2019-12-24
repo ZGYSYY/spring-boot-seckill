@@ -36,7 +36,10 @@ public class Test04App {
                 .build();
         client.start();
         // 删除一个节点，并且递归删除其所有的子节点
-        client.delete().deletingChildrenIfNeeded().forPath("/study");
+        Stat stat = client.checkExists().forPath("/study");
+        if (stat != null) {
+            client.delete().deletingChildrenIfNeeded().forPath("/study");
+        }
         LOGGER.info("清除上一次测试的数据成功！");
     }
 
@@ -179,11 +182,11 @@ public class Test04App {
         client.start();
 
         Executor executor = Executors.newFixedThreadPool(2);
-        client.create().creatingParentContainersIfNeeded().withProtection().withMode(CreateMode.EPHEMERAL).inBackground(new BackgroundCallback() {
+        client.create().creatingParentContainersIfNeeded().withMode(CreateMode.EPHEMERAL).inBackground(new BackgroundCallback() {
             @Override
             public void processResult(CuratorFramework client, CuratorEvent event) throws Exception {
                 LOGGER.info("开始调用回调方法，WatchedEvent: [{}], ResultCode: [{}]", event.getType(), event.getResultCode());
             }
-        }, executor).forPath("/name6", "AAA".getBytes());
+        }, executor).forPath("/name");
     }
 }
