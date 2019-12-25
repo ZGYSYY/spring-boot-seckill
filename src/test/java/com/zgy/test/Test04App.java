@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.Charset;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -188,5 +189,8 @@ public class Test04App {
                 LOGGER.info("开始调用回调方法，WatchedEvent: [{}], ResultCode: [{}]", event.getType(), event.getResultCode());
             }
         }, executor).forPath("/name");
+
+        // 不让程序结束，否则看不到回调方法的调用
+        for (;;);
     }
 }
