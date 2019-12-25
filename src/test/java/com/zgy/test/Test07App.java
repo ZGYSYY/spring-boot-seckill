@@ -2,8 +2,7 @@ package com.zgy.test;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.NodeCache;
+import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -12,12 +11,12 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * @author ZGY
- * @date 2019/12/25 11:19
- * @description Test06App, Curator 高级特性 Node Cache
+ * @date 2019/12/25 11:45
+ * @description Test07App, Curator 高级特性 Tree Cache
  */
-public class Test06App {
+public class Test07App {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Test06App.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Test07App.class);
 
     @Test
     public void test() throws Exception {
@@ -32,31 +31,30 @@ public class Test06App {
         // 连接 zookeeper服务器
         client.start();
 
-        // 创建一个 NodeCache 对象来监听指定节点
-        NodeCache nodeCache = new NodeCache(client, "/example/cache");
-        // 当节点数据变化时需要处理的逻辑
-        nodeCache.getListenable().addListener(() -> {
-            ChildData currentData = nodeCache.getCurrentData();
-            if (null != currentData) {
-                LOGGER.info("节点数据：Path[{}], Data: [{}]",currentData.getPath() , new String(currentData.getData()));
-            } else {
-                LOGGER.info("节点被删除！");
-            }
+        // 创建一个 NodeCache 对象来监听指定节点下的所有节点
+        TreeCache treeCache = new TreeCache(client, "/example/cache");
+        // 当指定节点下的某个节点数据变化时需要处理的逻辑
+        treeCache.getListenable().addListener((curatorFramework, event) -> {
+            LOGGER.info("事件类型：{}， 路径：{}，数据：{}",
+                    event.getType(),
+                    event.getData() == null? null:event.getData().getPath(),
+                    event.getData() == null? null:new String(event.getData().getData()));
         });
-        // 开始监听子节点变化
-        nodeCache.start();
+
+        // 开始监听指定节点下的所有节点变化
+        treeCache.start();
 
         // 创建节点
         client.create().creatingParentsIfNeeded().forPath("/example/cache", "test01".getBytes());
         TimeUnit.MILLISECONDS.sleep(100);
 
         // 修改数据
-        client.setData().forPath("/example/cache", "test01_V1".getBytes());
+        client.setData().forPath("/example/cache", "test01_V2".getBytes());
         TimeUnit.MILLISECONDS.sleep(100);
 
-        // 获取节点数据
-        String s = new String(client.getData().forPath("/example/cache"));
-        LOGGER.info("数据s：[{}]", s);
+        // 修改数据
+        client.setData().forPath("/example/cache", "test01_V3".getBytes());
+        TimeUnit.MILLISECONDS.sleep(100);
 
         // 删除节点
         client.delete().forPath("/example/cache");
@@ -66,7 +64,7 @@ public class Test06App {
         client.delete().deletingChildrenIfNeeded().forPath("/example");
 
         // 关闭监听
-        nodeCache.close();
+        treeCache.close();
 
         // 断开与 zookeeper 的连接
         client.close();
