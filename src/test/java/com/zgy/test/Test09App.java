@@ -10,14 +10,11 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,33 +28,29 @@ public class Test09App {
     private static final Logger LOGGER = LoggerFactory.getLogger(Test09App.class);
 
     @Test
-    public void test() throws IOException {
+    public void test() throws Exception {
         List<CuratorFramework> clients = new ArrayList<>();
         List<LeaderSelectorAdapter> examples = new ArrayList<>();
-        try {
-            for (int i = 0; i < 10; i++) {
-                CuratorFramework client
-                        = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(20000, 3));
-                clients.add(client);
-                LeaderSelectorAdapter selectorAdapter = new LeaderSelectorAdapter(client, "/francis/leader", "Client #" + i);
-                examples.add(selectorAdapter);
-                client.start();
-                selectorAdapter.start();
-            }
+        for (int i = 0; i < 5; i++) {
+            CuratorFramework client = CuratorFrameworkFactory.newClient("127.0.0.1:2181",
+                    new ExponentialBackoffRetry(20000, 3));
+            clients.add(client);
+            LeaderSelectorAdapter selectorAdapter = new LeaderSelectorAdapter(client, "/francis/leader", "Client #" + i);
+            examples.add(selectorAdapter);
+            // 连接 zookeeper 服务器
+            client.start();
+            // 开始执行 leader 选举
+            selectorAdapter.start();
+        }
 
-            Scanner scanner = new Scanner(System.in);
-            String next = scanner.next();
-            if (next != null) {
-                System.exit(-1);
-            }
-        } finally {
-            LOGGER.info("Shutting down...");
-            for (LeaderSelectorAdapter exampleClient : examples) {
-                CloseableUtils.closeQuietly(exampleClient);
-            }
-            for (CuratorFramework client : clients) {
-                CloseableUtils.closeQuietly(client);
-            }
+        // 测试完毕后，关闭选举和会话
+        TimeUnit.SECONDS.sleep(30);
+        LOGGER.info("开始回收数据了哦！");
+        for (LeaderSelectorAdapter example : examples) {
+            CloseableUtils.closeQuietly(example);
+        }
+        for (CuratorFramework client : clients) {
+            CloseableUtils.closeQuietly(client);
         }
     }
 
@@ -70,6 +63,7 @@ public class Test09App {
         public LeaderSelectorAdapter(CuratorFramework client, String path, String name) {
             this.name = name;
             this.leaderSelector = new LeaderSelector(client, path, this);
+            // 希望一个 selector 放弃 leader 后还要重新参与leader选举
             this.leaderSelector.autoRequeue();
         }
 
@@ -82,11 +76,15 @@ public class Test09App {
             leaderSelector.close();
         }
 
+        /**
+         * 当某个实例成为 leader 后就会执行这个方法，当这个方法执行完后，该实例就会放弃 leader 的执行权。
+         * @param client
+         * @throws Exception
+         */
         @Override
         public void takeLeadership(CuratorFramework client) throws Exception {
             final int waitSeconds = new Random().nextInt(5);
-            LOGGER.info("{} is now the leader. Waiting {} seconds...", name, waitSeconds);
-            LOGGER.info("{} has been leader {} time(s) before.", name, leaderCount.getAndIncrement());
+            LOGGER.info("{} 现在是 leader，接下来我会一直当 leader {} 秒钟，除开这一次，我已经当过 {} 次 leader 了！", name, waitSeconds, leaderCount.getAndIncrement());
             TimeUnit.SECONDS.sleep(waitSeconds);
         }
     }
