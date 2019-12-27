@@ -27,18 +27,18 @@ public class Test10App {
         // 创建需要共享的资源对象
         final FakeLimitedResource resource = new FakeLimitedResource();
         // 创建线程池对象
-        ExecutorService executorService = Executors.newFixedThreadPool(5);
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
 
         final ExponentialBackoffRetry retry = new ExponentialBackoffRetry(1000, 3);
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 2; i++) {
             final int index = i;
             Callable<Void> task = () -> {
                 CuratorFramework client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", 5000, 5000, retry);
                 try {
                     client.start();
                     InterProcessMutexDemo mutexDemo = new InterProcessMutexDemo(client, "/examples/locks", resource, "我是客户端: " + index);
-                    for (int j = 0; j < 5; j++) {
+                    for (int j = 0; j < 10; j++) {
                         mutexDemo.doWork(10, TimeUnit.SECONDS);
                     }
                 } catch (Exception e) {
@@ -146,7 +146,7 @@ public class Test10App {
             } finally {
                 LOGGER.info("{} 资源使用完毕，释第一次加的锁！", this.clientName);
                 lock.release();
-//                lock.release();
+                lock.release();
             }
         }
     }
