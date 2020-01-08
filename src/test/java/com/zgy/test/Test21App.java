@@ -22,7 +22,7 @@ public class Test21App {
 
     @Test
     public void test() throws InterruptedException {
-        CuratorFramework client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", 10000, 5000, new ExponentialBackoffRetry(5000, 3));
+        CuratorFramework client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", 20000, 5000, new ExponentialBackoffRetry(5000, 3));
         client.getCuratorListenable().addListener((client1, event) -> {
             LOGGER.info("监听客户端连接事件，事件名为：{}", event.getType().name());
         });
@@ -62,8 +62,13 @@ public class Test21App {
         @Override
         public void run() {
             try {
-                byte[] bytes = this.queue.take();
-                LOGGER.info("消费一条消息成功：{}", new String(bytes));
+                while (true) {
+                    byte[] bytes = this.queue.take();
+                    if (bytes == null) {
+                        break;
+                    }
+                    LOGGER.info("消费一条消息成功：{}", new String(bytes));
+                }
             } catch (Exception e) {
                 LOGGER.error("程序出现异常!", e);
                 return;
@@ -71,6 +76,9 @@ public class Test21App {
         }
     }
 
+    /**
+     * 生产者
+     */
     private class Producer implements Runnable {
 
         private SimpleDistributedQueue queue;
@@ -81,7 +89,7 @@ public class Test21App {
 
         @Override
         public void run() {
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 5; i++) {
                 try {
                     boolean flag = this.queue.offer(("test-" + i).getBytes());
                     if (flag) {
