@@ -45,8 +45,11 @@ public class Test22App {
                 LOGGER.info("客户端 #" + index + "准备数据");
 
                 // 告诉栅栏对象，数据准备完毕
-                barrier.waitOnBarrier();
-
+                try {
+                    barrier.waitOnBarrier();
+                } catch (Exception e) {
+                    LOGGER.error("程序出现异常！", e);
+                }
                 // 栅栏对象放行后，执行
                 LOGGER.info("开始处理数据！");
                 return null;
