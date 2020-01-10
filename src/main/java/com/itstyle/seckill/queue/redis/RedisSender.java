@@ -5,13 +5,19 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 /**
  * 生产者
- * @author 科帮网 By https://blog.52itstyle.com
+ * @author ZGY
  */
 @Service
 public class RedisSender {
+
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
-    //向通道发送消息的方法
+
+    /**
+     * 向通道发送消息的方法
+     * @param channel
+     * @param message
+     */
     public void sendChannelMess(String channel, String message) {
         stringRedisTemplate.convertAndSend(channel, message);
     }

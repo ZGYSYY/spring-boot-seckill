@@ -1,11 +1,10 @@
 package com.itstyle.seckill.web;
 
+import com.itstyle.seckill.queue.redis.RedisSubListenerConfig;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+
+import java.util.concurrent.*;
 import javax.jms.Destination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.slf4j.Logger;
@@ -29,6 +28,7 @@ import com.itstyle.seckill.service.ISeckillService;
 @RestController
 @RequestMapping("/seckillDistributed")
 public class SeckillDistributedController {
+
     private final static Logger LOGGER = LoggerFactory.getLogger(SeckillDistributedController.class);
 
     private static int corePoolSize = Runtime.getRuntime().availableProcessors();
@@ -74,7 +74,7 @@ public class SeckillDistributedController {
         final long killId = seckillId;
         LOGGER.info("开始秒杀一");
 
-        int threadNumber = 1000;
+        int threadNumber = 100;
         CountDownLatch latch = new CountDownLatch(threadNumber);
         for (int i = 0; i < threadNumber; i++) {
             final long userId = i;
@@ -98,26 +98,20 @@ public class SeckillDistributedController {
         return Result.ok();
     }
 
-    /**
-     *
-     * @param seckillId
-     * @return
-     */
     @ApiOperation(value = "秒杀二(zookeeper分布式锁)")
     @PostMapping("/startZkLock")
-    public Result startZkLock(long seckillId) {
+    public Result startZkLock(final long seckillId) {
         // 恢复数据
         seckillService.resetData(100, seckillId);
 
         // 模拟多人同时秒杀
-        final long killId = seckillId;
         LOGGER.info("开始秒杀二");
-        int threadNumber = 1000;
+        int threadNumber = 500;
         CountDownLatch latch = new CountDownLatch(threadNumber);
         for (int i = 0; i < threadNumber; i++) {
             final long userId = i;
             Runnable task = () -> {
-                Result result = seckillDistributedService.startSeckilZksLock(killId, userId);
+                Result result = seckillDistributedService.startSeckilZksLock(seckillId, userId);
                 LOGGER.info("用户:{}{}", userId, result.get("msg"));
                 latch.countDown();
             };
@@ -134,33 +128,37 @@ public class SeckillDistributedController {
         return Result.ok();
     }
 
-    @ApiOperation(value = "秒杀三(Redis分布式队列-订阅监听)", nickname = "科帮网")
+    @ApiOperation(value = "秒杀三(Redis分布式队列-订阅监听)")
     @PostMapping("/startRedisQueue")
-    public Result startRedisQueue(long seckillId) {
-        redisUtil.cacheValue(seckillId + "", null);//秒杀结束
-        seckillService.deleteSeckill(seckillId);
-        final long killId = seckillId;
+    public Result startRedisQueue(final long seckillId) {
+        // 在 Redis 中创建一个没有值的 Key
+        redisUtil.cacheValue(seckillId + "", null);
+        // 恢复数据
+        seckillService.resetData(100, seckillId);
+
         LOGGER.info("开始秒杀三");
-        for (int i = 0; i < 1000; i++) {
-            final long userId = i;
+        for (int i = 0; i < 2; i++) {
+            final int userId = i;
             Runnable task = () -> {
-                if (redisUtil.getValue(killId + "") == null) {
+                if (redisUtil.getValue(seckillId + "") == null) {
                     //思考如何返回给用户信息ws
-                    redisSender.sendChannelMess("seckill", killId + ";" + userId);
+                    redisSender.sendChannelMess("seckill", seckillId + ";" + userId);
                 } else {
                     //秒杀结束
                 }
             };
-            executor.execute(task);
+            executor.submit(task);
         }
+
         try {
-            Thread.sleep(10000);
-            redisUtil.cacheValue(killId + "", null);
+            TimeUnit.SECONDS.sleep(20);
+            redisUtil.cacheValue(seckillId + "", null);
             Long seckillCount = seckillService.getSeckillCount(seckillId);
             LOGGER.info("一共秒杀出{}件商品", seckillCount);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
         return Result.ok();
     }
 
