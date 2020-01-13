@@ -24,14 +24,17 @@ public class Test24App {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 5L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000));
         Random random = new Random();
 
-        for (int i = 0; i < 500; i++) {
+        for (int i = 0; i < 5; i++) {
             final int index = i;
-            Callable<Void> task = () -> {
-                TimeUnit.MILLISECONDS.sleep(random.nextInt(10));
+            Runnable task = () -> {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(random.nextInt(10));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 LOGGER.info("===============> 任务：{} 执行", index);
-                return null;
             };
-            executor.submit(task);
+            executor.execute(task);
         }
 
         executor.shutdown();

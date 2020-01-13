@@ -137,7 +137,7 @@ public class SeckillDistributedController {
         seckillService.resetData(100, seckillId);
 
         LOGGER.info("开始秒杀三");
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 5; i++) {
             final int userId = i;
             Runnable task = () -> {
                 if (redisUtil.getValue(seckillId + "") == null) {

@@ -31,7 +31,7 @@ public class RedisSubListenerConfig {
          * 如果不定义线程池，每一次消费都会创建一个线程，如果业务层面不做限制，就会导致秒杀超卖
          */
         ThreadFactory factory = new ThreadFactoryBuilder().setNameFormat("redis-listener-pool-%d").build();
-        Executor executor = new ThreadPoolExecutor(1, 2, 5L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000), factory);
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(2, 2, 5L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000), factory);
         container.setTaskExecutor(executor);
         return container;
     }
