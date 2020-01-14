@@ -25,28 +25,30 @@ public class RedisConsumer {
 
 	@Autowired
 	private RedisUtil redisUtil;
-	
+
+	/**
+	 * 在 RedisSubListenerConfig 中配置的方法，当发布方发送消息到通道后，订阅方就会获取该消息执行相应的业务逻辑
+	 * @param message
+	 */
     public void receiveMessage(String message) {
-    	LOGGER.info("消费消息，message: [{}]", message);
-		/*Thread th=Thread.currentThread();
-		LOGGER.info("线程名称：{}", th.getName());
-        //收到通道的消息之后执行秒杀操作(超卖)
+		Thread thread = Thread.currentThread();
+		LOGGER.info("当前线程名称：{}，发送方发送的消息为：{}", thread.getName(), message);
+
     	String[] array = message.split(";");
-		//control层已经判断了，其实这里不需要再判断了
-    	if(redisUtil.getValue(array[0])==null){
-    		Result result = seckillService.startSeckilDBPCC_TWO(Long.parseLong(array[0]), Long.parseLong(array[1]));
-    		if(result.equals(Result.ok(SeckillStatEnum.SUCCESS))){
+
+    	// 如果 redis 中 key 存在，但是没有值，说明可以访问数据库
+    	if (redisUtil.getValue(array[0]) == null) {
+			Result result = seckillService.startSeckilDBPCC_TWO(Long.parseLong(array[0]), Long.parseLong(array[1]));
+			if(result.equals(Result.ok(SeckillStatEnum.SUCCESS))){
 				//推送给前台
-    			WebSocketServer.sendInfo(array[0], "秒杀成功");
-    		}else{
+				WebSocketServer.sendInfo("秒杀成功", array[1]);
+			}else{
 				//推送给前台
-    			WebSocketServer.sendInfo(array[0], "秒杀失败");
-				//秒杀结束
-    			redisUtil.cacheValue(array[0], "ok");
-    		}
-    	}else{
-			//推送给前台
-    		WebSocketServer.sendInfo(array[0], "秒杀失败");
-    	}*/
+				WebSocketServer.sendInfo("秒杀失败", array[1]);
+				redisUtil.cacheValue(array[0], "end");
+			}
+		} else { // 如果 redis 中 key 存在，并且有值，说明就不可以访问数据库了，应为没有数据可以使用了，这样就减轻了数据库的访问压力
+			WebSocketServer.sendInfo("秒杀失败", array[1]);
+		}
     }
 }

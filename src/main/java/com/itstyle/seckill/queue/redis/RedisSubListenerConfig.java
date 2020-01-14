@@ -55,7 +55,7 @@ public class RedisSubListenerConfig {
          * 如果非要设置为 1，就要设置添加如下点，定义一个订阅线程池
          * container.setSubscriptionExecutor(Executors.newFixedThreadPool(1));
          */
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 2, 5L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000), factory);
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 10, 5L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000), factory);
         container.setSubscriptionExecutor(Executors.newFixedThreadPool(1));
         container.setTaskExecutor(executor);
         return container;

@@ -2,6 +2,10 @@ package com.itstyle.seckill.service.impl;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +24,8 @@ import com.itstyle.seckill.service.ISeckillService;
  */
 @Service("seckillService")
 public class SeckillServiceImpl implements ISeckillService {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(SeckillServiceImpl.class);
 	
 	@Autowired
 	private DynamicQuery dynamicQuery;
@@ -167,6 +173,7 @@ public class SeckillServiceImpl implements ISeckillService {
 			return Result.error(SeckillStatEnum.END);
 		}
 	}
+
     /**
      * SHOW STATUS LIKE 'innodb_row_lock%'; 
      * 如果发现锁争用比较严重，如InnoDB_row_lock_waits和InnoDB_row_lock_time_avg的值比较高
@@ -174,9 +181,14 @@ public class SeckillServiceImpl implements ISeckillService {
 	@Override
 	@Transactional
 	public Result startSeckilDBPCC_TWO(long seckillId, long userId) {
-		//单用户抢购一件商品没有问题、但是抢购多件商品不建议这种写法
-		String nativeSql = "UPDATE seckill  SET number=number-1 WHERE seckill_id=? AND number>0";//UPDATE锁表
+		//单用户抢购一件商品没有问题、但是抢购多件商品不建议这种写法, UPDATE锁表
+		String nativeSql = "UPDATE seckill  SET number=number-1 WHERE seckill_id=? AND number>0";
 		int count = dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{seckillId});
+		try {
+			TimeUnit.MILLISECONDS.sleep(20);
+		} catch (InterruptedException e) {
+			LOGGER.error("程序出现异常！", e);
+		}
 		if(count>0){
 			SuccessKilled killed = new SuccessKilled();
 			killed.setSeckillId(seckillId);

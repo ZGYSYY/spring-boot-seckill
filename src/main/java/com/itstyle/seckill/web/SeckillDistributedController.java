@@ -131,21 +131,15 @@ public class SeckillDistributedController {
     @ApiOperation(value = "秒杀三(Redis分布式队列-订阅监听)")
     @PostMapping("/startRedisQueue")
     public Result startRedisQueue(final long seckillId) {
-        // 在 Redis 中创建一个没有值的 Key
-        redisUtil.cacheValue(seckillId + "", null);
         // 恢复数据
         seckillService.resetData(100, seckillId);
 
         LOGGER.info("开始秒杀三");
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 1000; i++) {
             final int userId = i;
             Runnable task = () -> {
-                if (redisUtil.getValue(seckillId + "") == null) {
-                    //思考如何返回给用户信息ws
-                    redisSender.sendChannelMess("seckill", seckillId + ";" + userId);
-                } else {
-                    //秒杀结束
-                }
+                // 向通道发送消息，订阅方发现有消息就会执行订阅方对于的业务逻辑
+                redisSender.sendChannelMess("seckill", seckillId + ";" + userId);
             };
             executor.submit(task);
         }

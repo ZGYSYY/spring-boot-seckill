@@ -109,7 +109,7 @@ public class WebSocketServer {
      * 群发自定义消息
      * */
     public static void sendInfo(String message,@PathParam("userId") String userId){
-        LOGGER.info("推送消息到窗口"+userId+"，推送内容:"+message);
+        LOGGER.info("推送消息到窗口" + userId + "，推送内容:"+message);
         for (WebSocketServer item : webSocketSet) {
             try {
                 //这里可以设定只推送给这个userId的，为null则全部推送

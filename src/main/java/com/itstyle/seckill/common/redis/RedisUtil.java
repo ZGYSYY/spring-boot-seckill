@@ -105,7 +105,7 @@ public class RedisUtil {
      * @param k
      * @return
      */
-    public  Serializable getValue(String k) {
+    public Serializable getValue(String k) {
         try {
             ValueOperations<Serializable, Serializable> valueOps =  redisTemplate.opsForValue();
             return valueOps.get(KEY_PREFIX_VALUE + k);
