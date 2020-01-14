@@ -47,7 +47,9 @@ public class RedisConsumer {
 				WebSocketServer.sendInfo("秒杀失败", array[1]);
 				redisUtil.cacheValue(array[0], "end");
 			}
-		} else { // 如果 redis 中 key 存在，并且有值，说明就不可以访问数据库了，应为没有数据可以使用了，这样就减轻了数据库的访问压力
+		}
+		// 如果 redis 中 key 存在，并且有值，说明就不可以访问数据库了，应为没有数据可以使用了，这样就减轻了数据库的访问压力
+    	else {
 			WebSocketServer.sendInfo("秒杀失败", array[1]);
 		}
     }
