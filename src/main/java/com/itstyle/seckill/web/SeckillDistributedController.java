@@ -156,7 +156,7 @@ public class SeckillDistributedController {
         return Result.ok();
     }
 
-    @ApiOperation(value = "秒杀四(Kafka分布式队列)", nickname = "科帮网")
+    @ApiOperation(value = "秒杀四(Kafka分布式队列)")
     @PostMapping("/startKafkaQueue")
     public Result startKafkaQueue(long seckillId) {
         seckillService.deleteSeckill(seckillId);
